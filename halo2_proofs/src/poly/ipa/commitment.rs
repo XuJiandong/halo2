@@ -73,6 +73,10 @@ impl<'params, C: CurveAffine> Params<'params, C> for ParamsIPA<C> {
         self.n
     }
 
+    fn n2(&self) -> u64 {
+        self.g.len() as u64
+    }
+
     fn downsize(&mut self, k: u32) {
         assert!(k <= self.k);
 

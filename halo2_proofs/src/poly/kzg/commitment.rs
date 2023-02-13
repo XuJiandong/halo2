@@ -162,6 +162,10 @@ impl<'params, E: Engine + Debug> Params<'params, E::G1Affine> for ParamsKZG<E> {
         self.n
     }
 
+    fn n2(&self) -> u64 {
+        self.g.len() as u64
+    }
+
     fn downsize(&mut self, k: u32) {
         assert!(k <= self.k);
 
@@ -177,7 +181,7 @@ impl<'params, E: Engine + Debug> Params<'params, E::G1Affine> for ParamsKZG<E> {
 
         let n = 1 << k;
         self.g.truncate(n);
-        self.g_lagrange = g_to_lagrange(self.g.iter().map(|g| g.to_curve()).collect(), k);
+        self.g_lagrange.truncate(n);
     }
 
     fn empty_msm(&'params self) -> MSMKZG<E> {

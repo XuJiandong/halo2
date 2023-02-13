@@ -51,6 +51,8 @@ pub trait Params<'params, C: CurveAffine>: Sized + Clone {
     /// Size of the circuit
     fn n(&self) -> u64;
 
+    fn n2(&self) -> u64;
+
     /// Downsize `Params` with smaller `k`.
     fn downsize(&mut self, k: u32);
 

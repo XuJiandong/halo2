@@ -2,6 +2,7 @@ use ff::Field;
 use group::Curve;
 use rand_core::RngCore;
 use std::iter;
+use std::marker::PhantomData;
 
 use super::{
     vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
@@ -9,11 +10,11 @@ use super::{
 };
 use crate::arithmetic::{CurveAffine, FieldExt};
 use crate::poly::commitment::{CommitmentScheme, Verifier};
-use crate::poly::VerificationStrategy;
 use crate::poly::{
     commitment::{Blind, Params, MSM},
     Guard, VerifierQuery,
 };
+use crate::poly::{Polynomial, VerificationStrategy};
 use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
 
 #[cfg(feature = "batch")]
@@ -57,7 +58,6 @@ pub fn verify_proof<
                     let mut poly = instance.to_vec();
                     poly.resize(params.n() as usize, Scheme::Scalar::zero());
                     let poly = vk.domain.lagrange_from_vec(poly);
-
                     Ok(params.commit_lagrange(&poly, Blind::default()).to_affine())
                 })
                 .collect::<Result<Vec<_>, _>>()
@@ -348,9 +348,27 @@ pub fn verify_proof2<
     params: &'params Scheme::ParamsVerifier,
     vk: &VerifyingKey<Scheme::Curve>,
     strategy: Strategy,
-    instance_commitments: Vec<Vec<<Scheme as CommitmentScheme>::Curve>>,
+    instances: &[&[&[Scheme::Scalar]]],
     transcript: &mut T,
 ) -> Result<Strategy::Output, Error> {
+    let instance_commitments = instances
+        .iter()
+        .map(|instance| {
+            instance
+                .iter()
+                .map(|instance| {
+                    if instance.len() > params.n2() as usize - (vk.cs.blinding_factors() + 1) {
+                        return Err(Error::InstanceTooLarge);
+                    }
+                    let mut poly = instance.to_vec();
+                    poly.resize(params.n2() as usize, Scheme::Scalar::zero());
+                    let poly = Polynomial::new(poly);
+                    Ok(params.commit_lagrange(&poly, Blind::default()).to_affine())
+                })
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
     // Check that instances matches the expected number of instance columns
     for instances in instance_commitments.iter() {
         if instances.len() != vk.cs.num_instance_columns {
