@@ -54,6 +54,8 @@ pub trait Params<'params, C: CurveAffine>: Sized + Clone {
     /// Downsize `Params` with smaller `k`.
     fn downsize(&mut self, k: u32);
 
+    fn shrink(&mut self, k: u32);
+
     /// Generates an empty multiscalar multiplication struct using the
     /// appropriate params.
     fn empty_msm(&'params self) -> Self::MSM;
