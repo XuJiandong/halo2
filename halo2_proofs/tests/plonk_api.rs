@@ -17,6 +17,7 @@ use halo2_proofs::transcript::{
     Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge, TranscriptReadBuffer,
     TranscriptWriterBuffer,
 };
+use halo2curves::bn256::G1Affine;
 use rand_core::{OsRng, RngCore};
 use std::marker::PhantomData;
 
@@ -581,13 +582,21 @@ use std::marker::PhantomData;
 
         let verifier_params = params.verifier_params();
 
+        let mut vk_buf = vec![];
+        pk.get_vk().write(&mut vk_buf, halo2_proofs::SerdeFormat::RawBytes).expect("write");
+        
+        let vk = VerifyingKey::<G1Affine>::read::<&[u8], MyCircuit<<Scheme as CommitmentScheme>::Scalar>>(
+            &mut &vk_buf[..],
+            halo2_proofs::SerdeFormat::RawBytes,
+        ).expect("read");
+
         verify_proof::<
             _,
             VerifierSHPLONK<_>,
             _,
             Blake2bRead<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
-        >(verifier_params, pk.get_vk(), &proof[..]);
+        >(verifier_params, &vk, &proof[..]);
     }
 
     #[test]
